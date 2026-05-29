@@ -1,7 +1,5 @@
-# main.py
-
 from datasets import load_dataset
-from inference import *
+from inference import ask_model
 from evaluation import *
 from encoding import *
 
@@ -9,9 +7,9 @@ import pandas as pd
 from tqdm import tqdm
 import os
 
-# =========================================================
+# =====================================================
 # MODELS
-# =========================================================
+# =====================================================
 
 MODELS = [
 
@@ -22,9 +20,9 @@ MODELS = [
     "codellama:13b"
 ]
 
-# =========================================================
+# =====================================================
 # METHODS
-# =========================================================
+# =====================================================
 
 METHODS = [
 
@@ -37,91 +35,44 @@ METHODS = [
     "moe"
 ]
 
-# =========================================================
+# =====================================================
 # OUTPUT
-# =========================================================
+# =====================================================
 
 os.makedirs("outputs", exist_ok=True)
 
-# =========================================================
+# =====================================================
 # PROMPTS
-# =========================================================
+# =====================================================
 
 PLAIN_PROMPT = """
-Solve the following task carefully.
-
-Think step-by-step if needed.
-
-At the end,
-give the final answer clearly.
-"""
-
-# =========================================================
-# BASE64 PROMPT
-# =========================================================
-
-BASE64_PROMPT = """
-The following text is encoded using Base64 encoding.
-
-Your task is:
-
-1. Decode the Base64 text carefully.
-2. Recover the original English sentence.
-3. Solve the recovered task step-by-step.
-4. Give the final answer clearly.
-
-Do NOT explain Base64 itself.
-
-If this is a math problem,
-write at the end:
-
-Final Answer: <number>
-
-Encoded Text:
-"""
-
-# =========================================================
-# CAESAR PROMPT
-# =========================================================
-
-CAESAR_PROMPT = """
-The following sentence is encoded using a Caesar cipher.
-
-The alphabet was shifted forward by 3 characters.
-
-Your task is:
-
-1. Decode the Caesar cipher carefully.
-2. Recover the original English sentence.
-3. Solve the recovered task step-by-step.
-4. Give the final answer clearly.
-
-Do NOT generate example cryptography sentences.
-
-If this is a math problem,
-write at the end:
-
-Final Answer: <number>
-
-Encoded Text:
-"""
-
-# =========================================================
-# MOE PROMPT
-# =========================================================
-
-MOE_PROMPT = """
-You are given answers from three different reasoning systems.
-
-A is usually the most reliable.
-
-B and C were generated from encoded versions of the same task.
-
-Use B and C only if they semantically agree with A.
-
-Ignore unrelated or cryptography-example outputs.
+Solve the task.
 
 Return only the final answer.
+"""
+
+BASE64_PROMPT = """
+This text is encoded using Base64.
+
+Decode it and answer the task.
+
+Return only the answer.
+
+Encoded Text:
+"""
+
+CAESAR_PROMPT = """
+This text is encoded using a Caesar cipher (shift=3).
+
+Decode it and answer the task.
+
+Return only the answer.
+
+Encoded Text:
+"""
+
+MOE_PROMPT = """
+You are given answers from three systems.
 
 A:
 {A}
@@ -131,41 +82,47 @@ B:
 
 C:
 {C}
+
+Return only the best final answer.
 """
 
-# =========================================================
+# =====================================================
 # LOAD DATASETS
-# =========================================================
+# =====================================================
 
 print("Loading datasets...")
 
-# ---------------------------------------------------------
-# MMLU
-# ---------------------------------------------------------
+mmlu = load_dataset(
+    "cais/mmlu",
+    "all"
+)
 
-mmlu = load_dataset("cais/mmlu", "all")
+mgsm = load_dataset(
+    "juletxara/mgsm",
+    "en"
+)
 
-mmlu_samples = mmlu["test"].select(range(20))
+imdb = load_dataset(
+    "imdb"
+)
 
-# ---------------------------------------------------------
-# MGSM
-# ---------------------------------------------------------
+# =====================================================
+# SAMPLE SIZE
+# =====================================================
 
-mgsm = load_dataset("juletxara/mgsm", "en")
+SAMPLE_SIZE = 20
 
-mgsm_samples = mgsm["test"].select(range(20))
+mmlu_samples = mmlu["test"].select(
+    range(SAMPLE_SIZE)
+)
 
-# ---------------------------------------------------------
-# IMDB
-# ---------------------------------------------------------
+mgsm_samples = mgsm["test"].select(
+    range(SAMPLE_SIZE)
+)
 
-imdb = load_dataset("imdb")
-
-imdb_samples = imdb["test"].select(range(20))
-
-# =========================================================
-# DATASET DICT
-# =========================================================
+imdb_samples = imdb["test"].select(
+    range(SAMPLE_SIZE)
+)
 
 datasets_dict = {
 
@@ -176,55 +133,56 @@ datasets_dict = {
     "IMDB": imdb_samples
 }
 
-# =========================================================
+# =====================================================
+# SUMMARY
+# =====================================================
+
+summary_results = []
+
+# =====================================================
 # MODEL LOOP
-# =========================================================
+# =====================================================
 
 for MODEL_NAME in MODELS:
 
-    print(f"\n======================")
-    print(f"MODEL: {MODEL_NAME}")
-    print(f"======================")
+    print("\n====================")
+    print(MODEL_NAME)
+    print("====================")
 
     safe_model_name = MODEL_NAME.replace(":", "_")
 
     model_dir = f"outputs/{safe_model_name}"
 
-    os.makedirs(model_dir, exist_ok=True)
+    os.makedirs(
+        model_dir,
+        exist_ok=True
+    )
 
-    # =====================================================
+    # ===============================================
     # DATASET LOOP
-    # =====================================================
+    # ===============================================
 
     for dataset_name, samples in datasets_dict.items():
 
-        print(f"\n======================")
-        print(f"DATASET: {dataset_name}")
-        print(f"======================")
+        print(f"\nDataset: {dataset_name}")
 
-        # =================================================
+        dataset_scores = {}
+
+        # ===========================================
         # METHOD LOOP
-        # =================================================
+        # ===========================================
 
         for method in METHODS:
 
-            print(f"\nRunning method: {method}")
+            print(f"\nMethod: {method}")
 
             results = []
 
-            # =============================================
-            # SAMPLE LOOP
-            # =============================================
-
             for sample in tqdm(samples):
 
-                # =================================================
-                # DATASET PARSING
-                # =================================================
-
-                # -------------------------------------------------
+                # ===================================
                 # MMLU
-                # -------------------------------------------------
+                # ===================================
 
                 if dataset_name == "MMLU":
 
@@ -234,273 +192,315 @@ for MODEL_NAME in MODELS:
 
                     answer_idx = sample["answer"]
 
-                    correct_answer = choices[answer_idx]
+                    correct_answer = choices[
+                        answer_idx
+                    ]
 
                     task_text = f"""
-                    Question:
-                    {question}
+Question:
+{question}
 
-                    Choices:
-                    {choices}
+Choices:
+{choices}
 
-                    Only answer with the correct choice.
-                    """
+Return only the correct answer.
+"""
 
-                # -------------------------------------------------
+                # ===================================
                 # MGSM
-                # -------------------------------------------------
+                # ===================================
 
                 elif dataset_name == "MGSM":
 
                     question = sample["question"]
 
-                    correct_answer = sample["answer_number"]
+                    correct_answer = sample[
+                        "answer_number"
+                    ]
 
                     task_text = f"""
-                    Solve this math problem carefully.
+Solve the math problem.
 
-                    At the end write exactly:
+Question:
+{question}
 
-                    Final Answer: <number>
+Return only the final number.
+"""
 
-                    Question:
-                    {question}
-                    """
-
-                # -------------------------------------------------
+                # ===================================
                 # IMDB
-                # -------------------------------------------------
+                # ===================================
 
                 elif dataset_name == "IMDB":
 
                     question = sample["text"]
 
-                    correct_answer = sample["label"]
+                    correct_answer = sample[
+                        "label"
+                    ]
 
                     task_text = f"""
-                    Review:
-                    {question}
+Review:
+{question}
 
-                    Is this review positive or negative?
+Return only:
 
-                    Answer only:
-                    positive
-                    or
-                    negative
-                    """
+positive
 
-                # =================================================
-                # METHOD 1 : PLAIN
-                # =================================================
+or
 
-                if method == "plain":
+negative
+"""
+from datasets import load_dataset
+from inference import ask_model
+from evaluation import *
+from encoding import *
 
-                    final_response = ask_model(
+import pandas as pd
+from tqdm import tqdm
+import os
 
-                        f"""
-                        {PLAIN_PROMPT}
+# =====================================================
+# MODELS
+# =====================================================
 
-                        {task_text}
-                        """,
+MODELS = [
 
-                        MODEL_NAME
-                    )
+    "qwen2.5:14b",
 
-                    R1 = final_response
-                    R2 = ""
-                    R3 = ""
+    "gemma2:9b",
 
-                # =================================================
-                # METHOD 2 : BASE64
-                # =================================================
+    "codellama:13b"
+]
 
-                elif method == "base64":
+# =====================================================
+# METHODS
+# =====================================================
 
-                    encoded = encode_base64(task_text)
+METHODS = [
 
-                    base64_input = f"""
-                    {BASE64_PROMPT}
+    "plain",
 
-                    {encoded}
-                    """
+    "base64",
 
-                    final_response = ask_model(
+    "caesar",
 
-                        base64_input,
+    "moe"
+]
 
-                        MODEL_NAME
-                    )
+# =====================================================
+# OUTPUT
+# =====================================================
 
-                    R1 = ""
-                    R2 = final_response
-                    R3 = ""
+os.makedirs("outputs", exist_ok=True)
 
-                # =================================================
-                # METHOD 3 : CAESAR
-                # =================================================
+# =====================================================
+# PROMPTS
+# =====================================================
 
-                elif method == "caesar":
+PLAIN_PROMPT = """
+Solve the task.
 
-                    encoded = caesar_cipher(task_text)
+Return only the final answer.
+"""
 
-                    caesar_input = f"""
-                    {CAESAR_PROMPT}
+BASE64_PROMPT = """
+This text is encoded using Base64.
 
-                    {encoded}
-                    """
+Decode it and answer the task.
 
-                    final_response = ask_model(
+Return only the answer.
 
-                        caesar_input,
+Encoded Text:
+"""
 
-                        MODEL_NAME
-                    )
+CAESAR_PROMPT = """
+This text is encoded using a Caesar cipher (shift=3).
 
-                    R1 = ""
-                    R2 = ""
-                    R3 = final_response
+Decode it and answer the task.
 
-                # =================================================
-                # METHOD 4 : MOE
-                # =================================================
+Return only the answer.
 
-                elif method == "moe":
+Encoded Text:
+"""
 
-                    # ------------------------------------------------
-                    # R1
-                    # ------------------------------------------------
+MOE_PROMPT = """
+You are given answers from three systems.
 
-                    R1 = ask_model(
+A:
+{A}
 
-                        f"""
-                        {PLAIN_PROMPT}
+B:
+{B}
 
-                        {task_text}
-                        """,
+C:
+{C}
 
-                        MODEL_NAME
-                    )
+Return only the best final answer.
+"""
 
-                    # ------------------------------------------------
-                    # R2
-                    # ------------------------------------------------
+# =====================================================
+# LOAD DATASETS
+# =====================================================
 
-                    encoded_b64 = encode_base64(task_text)
+print("Loading datasets...")
 
-                    base64_input = f"""
-                    {BASE64_PROMPT}
+mmlu = load_dataset(
+    "cais/mmlu",
+    "all"
+)
 
-                    {encoded_b64}
-                    """
+mgsm = load_dataset(
+    "juletxara/mgsm",
+    "en"
+)
 
-                    R2 = ask_model(
+imdb = load_dataset(
+    "imdb"
+)
 
-                        base64_input,
+# =====================================================
+# SAMPLE SIZE
+# =====================================================
 
-                        MODEL_NAME
-                    )
+SAMPLE_SIZE = 20
 
-                    # ------------------------------------------------
-                    # R3
-                    # ------------------------------------------------
+mmlu_samples = mmlu["test"].select(
+    range(SAMPLE_SIZE)
+)
 
-                    encoded_caesar = caesar_cipher(task_text)
+mgsm_samples = mgsm["test"].select(
+    range(SAMPLE_SIZE)
+)
 
-                    caesar_input = f"""
-                    {CAESAR_PROMPT}
+imdb_samples = imdb["test"].select(
+    range(SAMPLE_SIZE)
+)
 
-                    {encoded_caesar}
-                    """
+datasets_dict = {
 
-                    R3 = ask_model(
+    "MMLU": mmlu_samples,
 
-                        caesar_input,
+    "MGSM": mgsm_samples,
 
-                        MODEL_NAME
-                    )
+    "IMDB": imdb_samples
+}
 
-                    # ------------------------------------------------
-                    # AGGREGATION
-                    # ------------------------------------------------
+# =====================================================
+# SUMMARY
+# =====================================================
 
-                    moe_input = MOE_PROMPT.format(
+summary_results = []
 
-                        A=R1,
-                        B=R2,
-                        C=R3
-                    )
+# =====================================================
+# MODEL LOOP
+# =====================================================
 
-                    final_response = ask_model(
+for MODEL_NAME in MODELS:
 
-                        moe_input,
+    print("\n====================")
+    print(MODEL_NAME)
+    print("====================")
 
-                        MODEL_NAME
-                    )
+    safe_model_name = MODEL_NAME.replace(":", "_")
 
-                # =================================================
-                # EVALUATION
-                # =================================================
+    model_dir = f"outputs/{safe_model_name}"
 
-                if dataset_name == "MGSM":
+    os.makedirs(
+        model_dir,
+        exist_ok=True
+    )
 
-                    correct = evaluate_mgsm(
+    # ===============================================
+    # DATASET LOOP
+    # ===============================================
 
-                        correct_answer,
+    for dataset_name, samples in datasets_dict.items():
 
-                        final_response
-                    )
+        print(f"\nDataset: {dataset_name}")
+
+        dataset_scores = {}
+
+        # ===========================================
+        # METHOD LOOP
+        # ===========================================
+
+        for method in METHODS:
+
+            print(f"\nMethod: {method}")
+
+            results = []
+
+            for sample in tqdm(samples):
+
+                # ===================================
+                # MMLU
+                # ===================================
+
+                if dataset_name == "MMLU":
+
+                    question = sample["question"]
+
+                    choices = sample["choices"]
+
+                    answer_idx = sample["answer"]
+
+                    correct_answer = choices[
+                        answer_idx
+                    ]
+
+                    task_text = f"""
+Question:
+{question}
+
+Choices:
+{choices}
+
+Return only the correct answer.
+"""
+
+                # ===================================
+                # MGSM
+                # ===================================
+
+                elif dataset_name == "MGSM":
+
+                    question = sample["question"]
+
+                    correct_answer = sample[
+                        "answer_number"
+                    ]
+
+                    task_text = f"""
+Solve the math problem.
+
+Question:
+{question}
+
+Return only the final number.
+"""
+
+                # ===================================
+                # IMDB
+                # ===================================
 
                 elif dataset_name == "IMDB":
 
-                    correct = evaluate_imdb(
+                    question = sample["text"]
 
-                        correct_answer,
+                    correct_answer = sample[
+                        "label"
+                    ]
 
-                        final_response
-                    )
+                    task_text = f"""
+Review:
+{question}
 
-                else:
+Return only:
 
-                    correct = evaluate_mmlu(
+positive
 
-                        correct_answer,
+or
 
-                        final_response
-                    )
-
-                # =================================================
-                # SAVE RESULT
-                # =================================================
-
-                results.append({
-
-                    "question": question,
-
-                    "correct_answer": correct_answer,
-
-                    "method": method,
-
-                    "R1": R1,
-                    "R2": R2,
-                    "R3": R3,
-
-                    "FINAL": final_response,
-
-                    "correct": correct
-                })
-
-            # =====================================================
-            # SAVE CSV
-            # =====================================================
-
-            df = pd.DataFrame(results)
-
-            save_path = f"{model_dir}/{method}_{dataset_name}.csv"
-
-            df.to_csv(save_path, index=False)
-
-            accuracy = df["correct"].mean() * 100
-
-            print(f"\n{dataset_name} Accuracy ({method}): {accuracy:.2f}")
-
-            print(f"Saved to: {save_path}")
+negative
+"""
