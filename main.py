@@ -305,7 +305,6 @@ Return only the final answer.
 """
 
 BASE64_PROMPT = """
-This text is encoded using Base64.
 
 Decode it and answer the task.
 
@@ -315,7 +314,6 @@ Encoded Text:
 """
 
 CAESAR_PROMPT = """
-This text is encoded using a Caesar cipher (shift=3).
 
 Decode it and answer the task.
 
