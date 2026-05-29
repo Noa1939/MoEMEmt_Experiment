@@ -504,3 +504,323 @@ or
 
 negative
 """
+                # ===================================
+                # METHOD : PLAIN
+                # ===================================
+
+                if method == "plain":
+
+                    final_response = ask_model(
+
+                        f"""
+{PLAIN_PROMPT}
+
+{task_text}
+""",
+
+                        MODEL_NAME
+                    )
+
+                    R1 = final_response
+                    R2 = ""
+                    R3 = ""
+
+                # ===================================
+                # METHOD : BASE64
+                # ===================================
+
+                elif method == "base64":
+
+                    encoded = encode_base64(
+                        task_text
+                    )
+
+                    prompt = f"""
+{BASE64_PROMPT}
+
+{encoded}
+"""
+
+                    final_response = ask_model(
+
+                        prompt,
+
+                        MODEL_NAME
+                    )
+
+                    R1 = ""
+                    R2 = final_response
+                    R3 = ""
+
+                # ===================================
+                # METHOD : CAESAR
+                # ===================================
+
+                elif method == "caesar":
+
+                    encoded = caesar_cipher(
+                        task_text
+                    )
+
+                    prompt = f"""
+{CAESAR_PROMPT}
+
+{encoded}
+"""
+
+                    final_response = ask_model(
+
+                        prompt,
+
+                        MODEL_NAME
+                    )
+
+                    R1 = ""
+                    R2 = ""
+                    R3 = final_response
+
+                # ===================================
+                # METHOD : MOE
+                # ===================================
+
+                elif method == "moe":
+
+                    # R1
+
+                    R1 = ask_model(
+
+                        f"""
+{PLAIN_PROMPT}
+
+{task_text}
+""",
+
+                        MODEL_NAME
+                    )
+
+                    # R2
+
+                    encoded_b64 = encode_base64(
+                        task_text
+                    )
+
+                    R2 = ask_model(
+
+                        f"""
+{BASE64_PROMPT}
+
+{encoded_b64}
+""",
+
+                        MODEL_NAME
+                    )
+
+                    # R3
+
+                    encoded_caesar = caesar_cipher(
+                        task_text
+                    )
+
+                    R3 = ask_model(
+
+                        f"""
+{CAESAR_PROMPT}
+
+{encoded_caesar}
+""",
+
+                        MODEL_NAME
+                    )
+
+                    # Aggregation
+
+                    moe_prompt = MOE_PROMPT.format(
+
+                        A=R1,
+                        B=R2,
+                        C=R3
+                    )
+
+                    final_response = ask_model(
+
+                        moe_prompt,
+
+                        MODEL_NAME
+                    )
+
+                # ===================================
+                # EVALUATION
+                # ===================================
+
+                if dataset_name == "MGSM":
+
+                    correct = evaluate_mgsm(
+
+                        correct_answer,
+
+                        final_response
+                    )
+
+                elif dataset_name == "IMDB":
+
+                    correct = evaluate_imdb(
+
+                        correct_answer,
+
+                        final_response
+                    )
+
+                else:
+
+                    correct = evaluate_mmlu(
+
+                        correct_answer,
+
+                        final_response
+                    )
+
+                # ===================================
+                # SAVE ROW
+                # ===================================
+
+                results.append({
+
+                    "question":
+                        question,
+
+                    "correct_answer":
+                        correct_answer,
+
+                    "method":
+                        method,
+
+                    "R1":
+                        R1,
+
+                    "R2":
+                        R2,
+
+                    "R3":
+                        R3,
+
+                    "FINAL":
+                        final_response,
+
+                    "correct":
+                        correct
+                })
+
+            # =======================================
+            # SAVE CSV
+            # =======================================
+
+            df = pd.DataFrame(
+                results
+            )
+
+            save_path = f"""
+
+{model_dir}/{method}_{dataset_name}.csv
+
+""".strip()
+
+            df.to_csv(
+
+                save_path,
+
+                index=False
+            )
+
+            accuracy = (
+
+                df["correct"].mean()
+
+                * 100
+            )
+
+            dataset_scores[
+                method
+            ] = accuracy
+
+            print(
+                f"{dataset_name} {method}: {accuracy:.2f}"
+            )
+
+        # ===========================================
+        # SUMMARY SAVE
+        # ===========================================
+
+        for method in METHODS:
+
+            summary_results.append({
+
+                "Model":
+                    MODEL_NAME,
+
+                "Method":
+                    method,
+
+                "Dataset":
+                    dataset_name,
+
+                "Accuracy":
+                    dataset_scores[
+                        method
+                    ]
+            })
+
+# =====================================================
+# FINAL SUMMARY
+# =====================================================
+
+summary_df = pd.DataFrame(
+    summary_results
+)
+
+summary_df.to_csv(
+
+    "outputs/summary.csv",
+
+    index=False
+)
+
+# =====================================================
+# PAPER TABLE
+# =====================================================
+
+paper_table = summary_df.pivot_table(
+
+    index=[
+        "Model",
+        "Method"
+    ],
+
+    columns="Dataset",
+
+    values="Accuracy"
+)
+
+paper_table.to_csv(
+
+    "outputs/final_table.csv"
+)
+
+print("\n====================")
+print("Experiment Finished")
+print("====================")
+
+print(
+    "\nSaved:"
+)
+
+print(
+    "outputs/summary.csv"
+)
+
+print(
+    "outputs/final_table.csv"
+)
+
+print(
+    paper_table
+)
