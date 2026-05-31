@@ -11,6 +11,11 @@ import os
 # MODELS
 # =====================================================
 
+MODELS = [
+    "gemma3:12b"
+]
+
+
 # MODELS = [
 
 #     "qwen2.5:14b",
@@ -20,22 +25,14 @@ import os
 #     "codellama:13b"
 # ]
 
-MODELS = [
-    "gemma3:12b"
-]
-
 # =====================================================
 # METHODS
 # =====================================================
 
 METHODS = [
-
     "plain",
-
     "base64",
-
     "caesar",
-
     "moe"
 ]
 
@@ -129,11 +126,8 @@ imdb_samples = imdb["test"].select(
 )
 
 datasets_dict = {
-
     "MMLU": mmlu_samples,
-
     "MGSM": mgsm_samples,
-
     "IMDB": imdb_samples
 }
 
@@ -154,7 +148,6 @@ for MODEL_NAME in MODELS:
     print("====================")
 
     safe_model_name = MODEL_NAME.replace(":", "_")
-
     model_dir = f"outputs/{safe_model_name}"
 
     os.makedirs(
@@ -191,14 +184,10 @@ for MODEL_NAME in MODELS:
                 if dataset_name == "MMLU":
 
                     question = sample["question"]
-
                     choices = sample["choices"]
 
                     answer_idx = sample["answer"]
-
-                    correct_answer = choices[
-                        answer_idx
-                    ]
+                    correct_answer = choices[answer_idx]
 
                     task_text = f"""
 Question:
@@ -255,259 +244,7 @@ or
 
 negative
 """
-from datasets import load_dataset
-from inference import ask_model
-from evaluation import *
-from encoding import *
 
-import pandas as pd
-from tqdm import tqdm
-import os
-
-# =====================================================
-# MODELS
-# =====================================================
-
-MODELS = [
-
-    "qwen2.5:14b",
-
-    "gemma2:9b",
-
-    "codellama:13b"
-]
-
-# =====================================================
-# METHODS
-# =====================================================
-
-METHODS = [
-
-    "plain",
-
-    "base64",
-
-    "caesar",
-
-    "moe"
-]
-
-# =====================================================
-# OUTPUT
-# =====================================================
-
-os.makedirs("outputs", exist_ok=True)
-
-# =====================================================
-# PROMPTS
-# =====================================================
-
-PLAIN_PROMPT = """
-Solve the task.
-
-Return only the final answer.
-"""
-
-BASE64_PROMPT = """
-This text is encoded using Base64.
-
-Decode it and answer the task.
-
-Return only the answer.
-
-Encoded Text:
-"""
-
-CAESAR_PROMPT = """
-This text is encoded using a Caesar cipher (shift=3).
-
-Decode it and answer the task.
-
-Return only the answer.
-
-Encoded Text:
-"""
-
-MOE_PROMPT = """
-You are given answers from three systems.
-
-A:
-{A}
-
-B:
-{B}
-
-C:
-{C}
-
-Return only the best final answer.
-"""
-
-# =====================================================
-# LOAD DATASETS
-# =====================================================
-
-print("Loading datasets...")
-
-mmlu = load_dataset(
-    "cais/mmlu",
-    "all"
-)
-
-mgsm = load_dataset(
-    "juletxara/mgsm",
-    "en"
-)
-
-imdb = load_dataset(
-    "imdb"
-)
-
-# =====================================================
-# SAMPLE SIZE
-# =====================================================
-
-SAMPLE_SIZE = 20
-
-mmlu_samples = mmlu["test"].select(
-    range(SAMPLE_SIZE)
-)
-
-mgsm_samples = mgsm["test"].select(
-    range(SAMPLE_SIZE)
-)
-
-imdb_samples = imdb["test"].select(
-    range(SAMPLE_SIZE)
-)
-
-datasets_dict = {
-
-    "MMLU": mmlu_samples,
-
-    "MGSM": mgsm_samples,
-
-    "IMDB": imdb_samples
-}
-
-# =====================================================
-# SUMMARY
-# =====================================================
-
-summary_results = []
-
-# =====================================================
-# MODEL LOOP
-# =====================================================
-
-for MODEL_NAME in MODELS:
-
-    print("\n====================")
-    print(MODEL_NAME)
-    print("====================")
-
-    safe_model_name = MODEL_NAME.replace(":", "_")
-
-    model_dir = f"outputs/{safe_model_name}"
-
-    os.makedirs(
-        model_dir,
-        exist_ok=True
-    )
-
-    # ===============================================
-    # DATASET LOOP
-    # ===============================================
-
-    for dataset_name, samples in datasets_dict.items():
-
-        print(f"\nDataset: {dataset_name}")
-
-        dataset_scores = {}
-
-        # ===========================================
-        # METHOD LOOP
-        # ===========================================
-
-        for method in METHODS:
-
-            print(f"\nMethod: {method}")
-
-            results = []
-
-            for sample in tqdm(samples):
-
-                # ===================================
-                # MMLU
-                # ===================================
-
-                if dataset_name == "MMLU":
-
-                    question = sample["question"]
-
-                    choices = sample["choices"]
-
-                    answer_idx = sample["answer"]
-
-                    correct_answer = choices[
-                        answer_idx
-                    ]
-
-                    task_text = f"""
-Question:
-{question}
-
-Choices:
-{choices}
-
-Return only the correct answer.
-"""
-
-                # ===================================
-                # MGSM
-                # ===================================
-
-                elif dataset_name == "MGSM":
-
-                    question = sample["question"]
-
-                    correct_answer = sample[
-                        "answer_number"
-                    ]
-
-                    task_text = f"""
-Solve the math problem.
-
-Question:
-{question}
-
-Return only the final number.
-"""
-
-                # ===================================
-                # IMDB
-                # ===================================
-
-                elif dataset_name == "IMDB":
-
-                    question = sample["text"]
-
-                    correct_answer = sample[
-                        "label"
-                    ]
-
-                    task_text = f"""
-Review:
-{question}
-
-Return only:
-
-positive
-
-or
-
-negative
-"""
                 # ===================================
                 # METHOD : PLAIN
                 # ===================================
@@ -515,13 +252,11 @@ negative
                 if method == "plain":
 
                     final_response = ask_model(
-
                         f"""
 {PLAIN_PROMPT}
 
 {task_text}
 """,
-
                         MODEL_NAME
                     )
 
@@ -546,9 +281,7 @@ negative
 """
 
                     final_response = ask_model(
-
                         prompt,
-
                         MODEL_NAME
                     )
 
@@ -573,9 +306,7 @@ negative
 """
 
                     final_response = ask_model(
-
                         prompt,
-
                         MODEL_NAME
                     )
 
@@ -589,66 +320,49 @@ negative
 
                 elif method == "moe":
 
-                    # R1
-
                     R1 = ask_model(
-
                         f"""
 {PLAIN_PROMPT}
 
 {task_text}
 """,
-
                         MODEL_NAME
                     )
-
-                    # R2
 
                     encoded_b64 = encode_base64(
                         task_text
                     )
 
                     R2 = ask_model(
-
                         f"""
 {BASE64_PROMPT}
 
 {encoded_b64}
 """,
-
                         MODEL_NAME
                     )
-
-                    # R3
 
                     encoded_caesar = caesar_cipher(
                         task_text
                     )
 
                     R3 = ask_model(
-
                         f"""
 {CAESAR_PROMPT}
 
 {encoded_caesar}
 """,
-
                         MODEL_NAME
                     )
 
-                    # Aggregation
-
                     moe_prompt = MOE_PROMPT.format(
-
                         A=R1,
                         B=R2,
                         C=R3
                     )
 
                     final_response = ask_model(
-
                         moe_prompt,
-
                         MODEL_NAME
                     )
 
@@ -659,27 +373,21 @@ negative
                 if dataset_name == "MGSM":
 
                     correct = evaluate_mgsm(
-
                         correct_answer,
-
                         final_response
                     )
 
                 elif dataset_name == "IMDB":
 
                     correct = evaluate_imdb(
-
                         correct_answer,
-
                         final_response
                     )
 
                 else:
 
                     correct = evaluate_mmlu(
-
                         correct_answer,
-
                         final_response
                     )
 
@@ -689,62 +397,39 @@ negative
 
                 results.append({
 
-                    "question":
-                        question,
+                    "question": question,
+                    "correct_answer": correct_answer,
+                    "method": method,
 
-                    "correct_answer":
-                        correct_answer,
+                    "R1": R1,
+                    "R2": R2,
+                    "R3": R3,
 
-                    "method":
-                        method,
+                    "FINAL": final_response,
 
-                    "R1":
-                        R1,
-
-                    "R2":
-                        R2,
-
-                    "R3":
-                        R3,
-
-                    "FINAL":
-                        final_response,
-
-                    "correct":
-                        correct
+                    "correct": correct
                 })
 
             # =======================================
             # SAVE CSV
             # =======================================
 
-            df = pd.DataFrame(
-                results
+            df = pd.DataFrame(results)
+
+            save_path = (
+                f"{model_dir}/{method}_{dataset_name}.csv"
             )
 
-            save_path = f"""
-
-{model_dir}/{method}_{dataset_name}.csv
-
-""".strip()
-
             df.to_csv(
-
                 save_path,
-
                 index=False
             )
 
             accuracy = (
-
-                df["correct"].mean()
-
-                * 100
+                df["correct"].mean() * 100
             )
 
-            dataset_scores[
-                method
-            ] = accuracy
+            dataset_scores[method] = accuracy
 
             print(
                 f"{dataset_name} {method}: {accuracy:.2f}"
@@ -758,19 +443,14 @@ negative
 
             summary_results.append({
 
-                "Model":
-                    MODEL_NAME,
+                "Model": MODEL_NAME,
 
-                "Method":
-                    method,
+                "Method": method,
 
-                "Dataset":
-                    dataset_name,
+                "Dataset": dataset_name,
 
                 "Accuracy":
-                    dataset_scores[
-                        method
-                    ]
+                    dataset_scores[method]
             })
 
 # =====================================================
@@ -782,30 +462,17 @@ summary_df = pd.DataFrame(
 )
 
 summary_df.to_csv(
-
     "outputs/summary.csv",
-
     index=False
 )
 
-# =====================================================
-# PAPER TABLE
-# =====================================================
-
 paper_table = summary_df.pivot_table(
-
-    index=[
-        "Model",
-        "Method"
-    ],
-
+    index=["Model", "Method"],
     columns="Dataset",
-
     values="Accuracy"
 )
 
 paper_table.to_csv(
-
     "outputs/final_table.csv"
 )
 
@@ -813,18 +480,8 @@ print("\n====================")
 print("Experiment Finished")
 print("====================")
 
-print(
-    "\nSaved:"
-)
+print("\nSaved:")
+print("outputs/summary.csv")
+print("outputs/final_table.csv")
 
-print(
-    "outputs/summary.csv"
-)
-
-print(
-    "outputs/final_table.csv"
-)
-
-print(
-    paper_table
-)
+print(paper_table)
