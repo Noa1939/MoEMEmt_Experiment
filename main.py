@@ -12,9 +12,17 @@ import os
 # =====================================================
 
 MODELS = [
-    "gemma3:12b"
-]
 
+    "qwen2.5:14b",
+
+    "gemma2:9b",
+
+    "codellama:13b",
+       
+    "gemma3:12b",
+
+    "gemma4:e4b"
+]
 
 # MODELS = [
 
@@ -22,7 +30,11 @@ MODELS = [
 
 #     "gemma2:9b",
 
-#     "codellama:13b"
+#     "codellama:13b",
+       
+#     "gemma3:12b",
+
+#     "gemma4:e4b"
 # ]
 
 # =====================================================
@@ -35,6 +47,15 @@ METHODS = [
     "caesar",
     "moe"
 ]
+
+
+# METHODS = [
+#     "plain",
+#     "base64",
+#     "caesar",
+#     "moe"
+# ]
+
 
 # =====================================================
 # OUTPUT
@@ -53,7 +74,6 @@ Return only the final answer.
 """
 
 BASE64_PROMPT = """
-This text is encoded using Base64.
 
 Decode it and answer the task.
 
@@ -61,9 +81,10 @@ Return only the answer.
 
 Encoded Text:
 """
+
+# This text is encoded using Base64.
 
 CAESAR_PROMPT = """
-This text is encoded using a Caesar cipher (shift=3).
 
 Decode it and answer the task.
 
@@ -71,6 +92,8 @@ Return only the answer.
 
 Encoded Text:
 """
+
+# This text is encoded using a Caesar cipher (shift=3).
 
 MOE_PROMPT = """
 You are given answers from three systems.
@@ -485,3 +508,4 @@ print("outputs/summary.csv")
 print("outputs/final_table.csv")
 
 print(paper_table)
+
