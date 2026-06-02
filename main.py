@@ -11,6 +11,10 @@ import os
 # MODELS
 # =====================================================
 
+# MODELS = [
+#     "gemma4:e4b"
+# ]
+
 MODELS = [
 
     "qwen2.5:14b",
@@ -23,19 +27,6 @@ MODELS = [
 
     "gemma4:e4b"
 ]
-
-# MODELS = [
-
-#     "qwen2.5:14b",
-
-#     "gemma2:9b",
-
-#     "codellama:13b",
-       
-#     "gemma3:12b",
-
-#     "gemma4:e4b"
-# ]
 
 # =====================================================
 # METHODS
@@ -74,7 +65,6 @@ Return only the final answer.
 """
 
 BASE64_PROMPT = """
-
 Decode it and answer the task.
 
 Return only the answer.
@@ -85,7 +75,6 @@ Encoded Text:
 # This text is encoded using Base64.
 
 CAESAR_PROMPT = """
-
 Decode it and answer the task.
 
 Return only the answer.
@@ -287,6 +276,8 @@ negative
                     R2 = ""
                     R3 = ""
 
+                    # print("PLAIN =", repr(final_response))
+
                 # ===================================
                 # METHOD : BASE64
                 # ===================================
@@ -377,6 +368,12 @@ negative
 """,
                         MODEL_NAME
                     )
+
+                    # print("\n===== MOE DEBUG =====")
+                    # print("R1 =", repr(R1))
+                    # print("R2 =", repr(R2))
+                    # print("R3 =", repr(R3))
+                    # print("=====================\n")
 
                     moe_prompt = MOE_PROMPT.format(
                         A=R1,
