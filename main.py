@@ -35,6 +35,7 @@ MODELS = [
 METHODS = [
     "plain",
     "base64",
+    "guided_base64",
     "caesar",
     "moe"
 ]
@@ -65,6 +66,8 @@ Return only the final answer.
 """
 
 BASE64_PROMPT = """
+This text is encoded using Base64.
+
 Decode it and answer the task.
 
 Return only the answer.
@@ -72,17 +75,16 @@ Return only the answer.
 Encoded Text:
 """
 
-# This text is encoded using Base64.
 
 CAESAR_PROMPT = """
+This text is encoded using a Caesar cipher (shift=3).
+
 Decode it and answer the task.
 
 Return only the answer.
 
 Encoded Text:
 """
-
-# This text is encoded using a Caesar cipher (shift=3).
 
 MOE_PROMPT = """
 You are given answers from three systems.
@@ -98,6 +100,50 @@ C:
 
 Return only the best final answer.
 """
+
+GUIDED_BASE64_PROMPT = """
+This text is encoded using Base64.
+
+{guideline}
+
+Decode the text and answer the task.
+
+Return only the answer.
+
+Encoded Text:
+"""
+
+# =====================================================
+# TASK_GUIDELINES
+# =====================================================
+
+TASK_GUIDELINES = {
+
+    "MGSM": """
+Carefully reconstruct all numerical values.
+
+Preserve quantities exactly.
+
+Verify arithmetic relationships before solving.
+""",
+
+    "IMDB": """
+Focus on emotional expressions.
+
+Identify sentiment-bearing words.
+
+Determine overall sentiment.
+""",
+
+    "MMLU": """
+Identify the key concept.
+
+Focus on factual correctness.
+
+Choose the most likely answer.
+"""
+}
+
 
 # =====================================================
 # LOAD DATASETS
@@ -304,6 +350,37 @@ negative
                     R3 = ""
 
                 # ===================================
+                # METHOD : GUIDED_BASE64
+                # ===================================
+
+                elif method == "guided_base64":
+
+                    encoded = encode_base64(
+                        task_text
+                    )
+
+                    guideline = TASK_GUIDELINES[
+                        dataset_name
+                    ]
+
+                    prompt = GUIDED_BASE64_PROMPT.format(
+                        guideline=guideline
+                    )
+
+                    final_response = ask_model(
+                        f"""
+                {prompt}
+
+                {encoded}
+                    """,
+                        MODEL_NAME
+                    )
+
+                    R1 = ""
+                    R2 = final_response
+                    R3 = ""
+
+                # ===================================
                 # METHOD : CAESAR
                 # ===================================
 
@@ -385,6 +462,8 @@ negative
                         moe_prompt,
                         MODEL_NAME
                     )
+                    
+                    
 
                 # ===================================
                 # EVALUATION
