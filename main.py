@@ -35,9 +35,7 @@ MODELS = [
 METHODS = [
     "plain",
     "base64",
-    "guided_base64",
-    "caesar",
-    "moe"
+    "guided_base64"
 ]
 
 
@@ -120,11 +118,15 @@ Encoded Text:
 TASK_GUIDELINES = {
 
     "MGSM": """
-Carefully reconstruct all numerical values.
+This is a mathematical reasoning task.
 
-Preserve quantities exactly.
+Decode every number exactly.
 
-Verify arithmetic relationships before solving.
+Do not change any quantity.
+
+Verify all numbers before solving.
+
+Return only the final numeric answer.
 """,
 
     "IMDB": """
@@ -136,11 +138,15 @@ Determine overall sentiment.
 """,
 
     "MMLU": """
-Identify the key concept.
+Decode the question completely.
 
-Focus on factual correctness.
+Read all answer choices carefully.
 
-Choose the most likely answer.
+Do not guess from partial text.
+
+Select the single best answer.
+
+Return only the answer text.
 """
 }
 
